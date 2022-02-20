@@ -28,20 +28,25 @@ import (
 )
 
 type inmemoryStorage struct {
+	name      string
 	cache     *cache.Cache
 }
 
-func NewDefault() storage.ManagedStorage {
-	return New(DefaultConfig)
+func NewDefault(name string) storage.ManagedStorage {
+	return New(name, DefaultConfig)
 }
 
-func New(conf *Config) storage.ManagedStorage {
+func New(name string, conf *Config) storage.ManagedStorage {
 	c := cache.New(conf.DefaultExpiration, conf.CleanupInterval)
-	return &inmemoryStorage {c}
+	return &inmemoryStorage {name: name, cache: c}
 }
 
-func FromCache(c *cache.Cache) storage.ManagedStorage {
-	return &inmemoryStorage {c}
+func FromCache(name string, c *cache.Cache) storage.ManagedStorage {
+	return &inmemoryStorage {name: name, cache: c}
+}
+
+func (t* inmemoryStorage) BeanName() string {
+	return t.name
 }
 
 func (t* inmemoryStorage) Destroy() error {
