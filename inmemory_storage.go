@@ -65,6 +65,10 @@ func (t* inmemoryStorage) CompareAndSet() *storage.CompareAndSetOperation {
 	return &storage.CompareAndSetOperation{Storage: t}
 }
 
+func (t *inmemoryStorage) Increment() *storage.IncrementOperation {
+	return &storage.IncrementOperation{Storage: t, Initial: 0, Delta: 1}
+}
+
 func (t* inmemoryStorage) Remove() *storage.RemoveOperation {
 	return &storage.RemoveOperation{Storage: t}
 }
@@ -73,8 +77,8 @@ func (t* inmemoryStorage) Enumerate() *storage.EnumerateOperation {
 	return &storage.EnumerateOperation{Storage: t}
 }
 
-func (t* inmemoryStorage) GetRaw(bucket, key []byte, ttlPtr *int, versionPtr *int64, required bool) ([]byte, error) {
-	return t.getImpl(bucket, key, required)
+func (t* inmemoryStorage) GetRaw(prefix, key []byte, ttlPtr *int, versionPtr *int64, required bool) ([]byte, error) {
+	return t.getImpl(prefix, key, required)
 }
 
 func (t* inmemoryStorage) SetRaw(prefix, key, value []byte, ttlSeconds int) error {
@@ -87,6 +91,35 @@ func (t* inmemoryStorage) SetRaw(prefix, key, value []byte, ttlSeconds int) erro
 	}
 
 	t.cache.Set(string(rawKey), value, ttl)
+	return nil
+}
+
+func (t *inmemoryStorage) DoInTransaction(prefix, key []byte, cb func(entry *storage.RawEntry) bool) error {
+
+	rawKey := append(prefix, key...)
+
+	rawEntry := &storage.RawEntry {
+		Key: rawKey,
+		Ttl: storage.NoTTL,
+		Version: 0,
+	}
+
+	if obj, ok := t.cache.Get(string(rawKey)); ok && obj != nil {
+		if b, ok := obj.([]byte); ok {
+			rawEntry.Value = b
+		}
+	}
+
+	if !cb(rawEntry) {
+		return ErrCanceled
+	}
+
+	ttl := cache.NoExpiration
+	if rawEntry.Ttl > 0 {
+		ttl = time.Second * time.Duration(rawEntry.Ttl)
+	}
+
+	t.cache.Set(string(rawKey), rawEntry.Value, ttl)
 	return nil
 }
 

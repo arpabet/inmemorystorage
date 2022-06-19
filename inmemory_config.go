@@ -21,6 +21,11 @@ package inmemorystorage
 import (
 	"github.com/patrickmn/go-cache"
 	"time"
+	"errors"
+)
+
+var (
+	ErrCanceled         = errors.New("operation was canceled")
 )
 
 var DefaultConfig = &Config{
