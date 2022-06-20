@@ -37,10 +37,20 @@ type inmemoryStorage struct {
 }
 
 func NewDefault(name string) storage.ManagedStorage {
-	return New(name, DefaultConfig)
+	return New(name)
 }
 
-func New(name string, conf *Config) storage.ManagedStorage {
+func New(name string, options ...Option) storage.ManagedStorage {
+
+	conf := &Config{
+		DefaultExpiration: cache.NoExpiration,
+		CleanupInterval:  time.Hour,
+	}
+
+	for _, opt := range options {
+		opt.apply(conf)
+	}
+
 	c := cache.New(conf.DefaultExpiration, conf.CleanupInterval)
 	return &inmemoryStorage {name: name, cache: c}
 }
