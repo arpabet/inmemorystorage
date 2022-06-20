@@ -81,34 +81,30 @@ func (t* inmemoryStorage) Enumerate() *storage.EnumerateOperation {
 	return &storage.EnumerateOperation{Storage: t}
 }
 
-func (t* inmemoryStorage) GetRaw(prefix, key []byte, ttlPtr *int, versionPtr *int64, required bool) ([]byte, error) {
-	return t.getImpl(prefix, key, required)
+func (t* inmemoryStorage) GetRaw(key []byte, ttlPtr *int, versionPtr *int64, required bool) ([]byte, error) {
+	return t.getImpl(key, required)
 }
 
-func (t* inmemoryStorage) SetRaw(prefix, key, value []byte, ttlSeconds int) error {
-
-	rawKey := append(prefix, key...)
+func (t* inmemoryStorage) SetRaw(key, value []byte, ttlSeconds int) error {
 
 	ttl := cache.NoExpiration
 	if ttlSeconds > 0 {
 		ttl = time.Second * time.Duration(ttlSeconds)
 	}
 
-	t.cache.Set(string(rawKey), value, ttl)
+	t.cache.Set(string(key), value, ttl)
 	return nil
 }
 
-func (t *inmemoryStorage) DoInTransaction(prefix, key []byte, cb func(entry *storage.RawEntry) bool) error {
-
-	rawKey := append(prefix, key...)
+func (t *inmemoryStorage) DoInTransaction(key []byte, cb func(entry *storage.RawEntry) bool) error {
 
 	rawEntry := &storage.RawEntry {
-		Key: rawKey,
+		Key: key,
 		Ttl: storage.NoTTL,
 		Version: 0,
 	}
 
-	if obj, ok := t.cache.Get(string(rawKey)); ok && obj != nil {
+	if obj, ok := t.cache.Get(string(key)); ok && obj != nil {
 		if b, ok := obj.([]byte); ok {
 			rawEntry.Value = b
 		}
@@ -123,25 +119,23 @@ func (t *inmemoryStorage) DoInTransaction(prefix, key []byte, cb func(entry *sto
 		ttl = time.Second * time.Duration(rawEntry.Ttl)
 	}
 
-	t.cache.Set(string(rawKey), rawEntry.Value, ttl)
+	t.cache.Set(string(key), rawEntry.Value, ttl)
 	return nil
 }
 
-func (t* inmemoryStorage) CompareAndSetRaw(bucket, key, value []byte, ttlSeconds int, version int64) (bool, error) {
-	return true, t.SetRaw(bucket, key, value, ttlSeconds)
+func (t* inmemoryStorage) CompareAndSetRaw(key, value []byte, ttlSeconds int, version int64) (bool, error) {
+	return true, t.SetRaw(key, value, ttlSeconds)
 }
 
-func (t* inmemoryStorage) RemoveRaw(prefix, key []byte) error {
-	rawKey := append(prefix, key...)
-	t.cache.Delete(string(rawKey))
+func (t* inmemoryStorage) RemoveRaw(key []byte) error {
+	t.cache.Delete(string(key))
 	return nil
 }
 
-func (t* inmemoryStorage) getImpl(prefix, key []byte, required bool) ([]byte, error) {
+func (t* inmemoryStorage) getImpl(key []byte, required bool) ([]byte, error) {
 
-	rawKey := append(prefix, key...)
 	var val []byte
-	if obj, ok := t.cache.Get(string(rawKey)); ok && obj != nil {
+	if obj, ok := t.cache.Get(string(key)); ok && obj != nil {
 		if b, ok := obj.([]byte); ok {
 			val = b
 		}
