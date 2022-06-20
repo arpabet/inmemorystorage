@@ -41,18 +41,8 @@ func NewDefault(name string) storage.ManagedStorage {
 }
 
 func New(name string, options ...Option) storage.ManagedStorage {
-
-	conf := &Config{
-		DefaultExpiration: cache.NoExpiration,
-		CleanupInterval:  time.Hour,
-	}
-
-	for _, opt := range options {
-		opt.apply(conf)
-	}
-
-	c := cache.New(conf.DefaultExpiration, conf.CleanupInterval)
-	return &inmemoryStorage {name: name, cache: c}
+	cache := OpenDatabase(options...)
+	return &inmemoryStorage {name: name, cache: cache}
 }
 
 func FromCache(name string, c *cache.Cache) storage.ManagedStorage {
