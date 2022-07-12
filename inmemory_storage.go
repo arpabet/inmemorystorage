@@ -158,9 +158,11 @@ func (t* inmemoryStorage) EnumerateRaw(prefix, seek []byte, batchSize int, onlyK
 		if val, ok := item.Object.([]byte); ok && strings.HasPrefix(key, prefixStr) && key >= seekStr {
 			re := storage.RawEntry{
 				Key:     []byte(key),
-				Value:   val,
 				Ttl:     int(item.Expiration),
 				Version: item.Expiration,
+			}
+			if !onlyKeys {
+				re.Value = val
 			}
 			if !cb(&re) {
 				break
@@ -170,22 +172,6 @@ func (t* inmemoryStorage) EnumerateRaw(prefix, seek []byte, batchSize int, onlyK
 	}
 
 	return nil
-}
-
-func (t* inmemoryStorage) FetchKeysRaw(prefix []byte, batchSize int) ([][]byte, error) {
-
-	prefixStr := string(prefix)
-	var keys [][]byte
-
-	for key, _ := range t.cache.Items() {
-
-		if strings.HasPrefix(key, prefixStr){
-			keys = append(keys, []byte(key))
-		}
-
-	}
-
-	return keys, nil
 }
 
 func (t* inmemoryStorage) Compact(discardRatio float64) error {
